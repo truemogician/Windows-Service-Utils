@@ -182,8 +182,10 @@ internal sealed class CommandRunnerService(
 			.Split([Path.PathSeparator], StringSplitOptions.RemoveEmptyEntries);
 		if (Path.HasExtension(fileName))
 			return pathDirs.Select(dir => Path.Combine(dir, fileName)).FirstOrDefault(File.Exists);
-		var extensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
-			.Split([Path.PathSeparator], StringSplitOptions.RemoveEmptyEntries);
+		var extensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? "")
+			.Split([Path.PathSeparator], StringSplitOptions.RemoveEmptyEntries)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		extensions.UnionWith(InterpreterConfig.Extensions);
 		foreach (string dir in pathDirs) {
 			foreach (string ext in extensions) {
 				string candidate = Path.Combine(dir, fileName + ext);
@@ -201,8 +203,7 @@ internal sealed class CommandRunnerService(
 		string ext = Path.GetExtension(fileName).ToLowerInvariant();
 		if (ext.Length == 0)
 			return;
-		var interpreters = InterpreterConfig.Load();
-		if (!interpreters.TryGetValue(ext, out var entry))
+		if (!InterpreterConfig.TryGetInterpreter(ext, out var entry))
 			return;
 		string args = entry.Args.Replace("{file}", fileName);
 		if (arguments.Length > 0)

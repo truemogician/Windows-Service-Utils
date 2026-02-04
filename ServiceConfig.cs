@@ -64,7 +64,7 @@ internal sealed class ServiceConfig {
 	}
 
 	public void Save() {
-		Directory.CreateDirectory(Paths.GetConfigsFolder());
+		Directory.CreateDirectory(Paths.ConfigsFolder);
 		string json = JsonSerializer.Serialize(this, ServiceConfigContext.Default.ServiceConfig);
 		File.WriteAllText(Paths.GetConfigPath(Name), json);
 	}

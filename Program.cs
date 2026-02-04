@@ -218,12 +218,8 @@ var interpreterCmd = new Command("interpreter", "Manage script interpreter mappi
 
 var intListCmd = new Command("list", "List all interpreter mappings");
 intListCmd.SetAction(_ => {
-	var all = InterpreterConfig.Load();
-	var custom = InterpreterConfig.LoadCustom();
-	foreach (var kvp in all.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase)) {
-		string marker = custom.ContainsKey(kvp.Key) ? " (custom)" : "";
-		Console.WriteLine($"  {kvp.Key,-8} {kvp.Value.Exec} {kvp.Value.Args}{marker}");
-	}
+	foreach (var kvp in InterpreterConfig.EnumerateInterpreters().OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+		Console.WriteLine($"  {kvp.Key,-8} {kvp.Value.Exec} {kvp.Value.Args}");
 	return 0;
 });
 interpreterCmd.Subcommands.Add(intListCmd);
@@ -241,10 +237,8 @@ intSetCmd.SetAction(result => {
 		ext = "." + ext;
 	var exec = result.GetValue(intExecOpt)!;
 	var intArgs = result.GetValue(intArgsOpt) ?? "\"{file}\"";
-
-	var custom = InterpreterConfig.LoadCustom();
-	custom[ext] = new(exec, intArgs);
-	InterpreterConfig.SaveCustom(custom);
+	InterpreterConfig.SetInterpreter(ext, new(exec, intArgs));
+	InterpreterConfig.Save();
 	Console.WriteLine($"Interpreter for '{ext}' set to: {exec} {intArgs}");
 	return 0;
 });
@@ -257,14 +251,13 @@ intRemoveCmd.SetAction(result => {
 	var ext = result.GetValue(intRemoveExtArg)!;
 	if (!ext.StartsWith("."))
 		ext = "." + ext;
-	var custom = InterpreterConfig.LoadCustom();
-	if (!custom.Remove(ext)) {
+	var entry = InterpreterConfig.Remove(ext);
+	if (entry is null) {
 		Console.WriteLine($"No custom interpreter mapping found for '{ext}'.");
 		return 1;
 	}
-	InterpreterConfig.SaveCustom(custom);
-	var defaultEntry = InterpreterConfig.GetDefault(ext);
-	Console.WriteLine(defaultEntry is not null ? $"Custom mapping for '{ext}' removed. Default restored: {defaultEntry.Exec} {defaultEntry.Args}" : $"Custom mapping for '{ext}' removed.");
+	InterpreterConfig.Save();
+	Console.WriteLine($"Custom mapping for '{ext}' removed.");
 	return 0;
 });
 interpreterCmd.Subcommands.Add(intRemoveCmd);
