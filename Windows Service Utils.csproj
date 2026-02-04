@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net472</TargetFramework>
+		<RootNamespace>WindowsServiceUtils</RootNamespace>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Authors>true_mogician</Authors>
+		<NeutralLanguage>en</NeutralLanguage>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<PreferNativeArm64>True</PreferNativeArm64>
+		<AssemblyTitle>$(MSBuildProjectName)</AssemblyTitle>
+		<AssemblyName>wsu</AssemblyName>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ZipArchiveName>$(AssemblyName)-$(AssemblyVersion).zip</ZipArchiveName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="3.1.32" />
+		<PackageReference Include="PolySharp" Version="1.14.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="System.CommandLine" Version="2.0.2" />
+		<PackageReference Include="System.Memory" Version="4.5.5" />
+		<PackageReference Include="System.ServiceProcess.ServiceController" Version="4.7.0" />
+		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+	</ItemGroup>
+
+	<Target Name="CreateZipArchive" AfterTargets="Build" Condition="$(Configuration)==Release">
+		<Delete Files="$(TargetDir)$(ZipArchiveName)" />
+		<Exec Command="powershell -NoProfile -Command &quot;Compress-Archive -Path '$(TargetDir)*' -DestinationPath '$(TargetDir)$(ZipArchiveName)' -Force&quot;" />
+	</Target>
+
+	<Target Name="CleanZipArchive" AfterTargets="Clean" Condition="$(Configuration)==Release">
+		<Delete Files="$(TargetDir)$(ZipArchiveName)" />
+	</Target>
+
+</Project>
