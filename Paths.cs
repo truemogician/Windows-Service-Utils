@@ -13,4 +13,7 @@ internal static class Paths {
 
 	public static string GetConfigPath(string name) =>
 		Path.Combine(DataFolder, "configs", $"{name}.json");
+
+	public static string GetInterpreterConfigPath() =>
+		Path.Combine(DataFolder, "interpreter.json");
 }

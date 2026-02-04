@@ -175,24 +175,39 @@ internal sealed class CommandRunnerService(
 		return (fileName, arguments); 
 	}
 
-	private static void ResolveInterpreter(ref string fileName, ref string arguments) {
-		switch (Path.GetExtension(fileName).ToLower()) {
-			case ".cmd" or ".bat": {
-				string args = $"/c \"{fileName}\"";
-				if (arguments.Length > 0)
-					args += " " + arguments;
-				fileName = "cmd.exe";
-				arguments = args;
-				break;
-			}
-			case ".ps1": {
-				string args = $"-NoProfile -File \"{fileName}\"";
-				if (arguments.Length > 0)
-					args += " " + arguments;
-				fileName = "powershell.exe";
-				arguments = args;
-				break;
+	private static string? ResolveExecutable(string fileName) {
+		if (Path.IsPathRooted(fileName))
+			return File.Exists(fileName) ? fileName : null;
+		var pathDirs = (Environment.GetEnvironmentVariable("PATH") ?? "")
+			.Split([Path.PathSeparator], StringSplitOptions.RemoveEmptyEntries);
+		if (Path.HasExtension(fileName))
+			return pathDirs.Select(dir => Path.Combine(dir, fileName)).FirstOrDefault(File.Exists);
+		var extensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
+			.Split([Path.PathSeparator], StringSplitOptions.RemoveEmptyEntries);
+		foreach (string dir in pathDirs) {
+			foreach (string ext in extensions) {
+				string candidate = Path.Combine(dir, fileName + ext);
+				if (File.Exists(candidate))
+					return candidate;
 			}
 		}
+		return null;
+	}
+
+	private static void ResolveInterpreter(ref string fileName, ref string arguments) {
+		string? resolved = ResolveExecutable(fileName);
+		if (resolved is not null)
+			fileName = resolved;
+		string ext = Path.GetExtension(fileName).ToLowerInvariant();
+		if (ext.Length == 0)
+			return;
+		var interpreters = InterpreterConfig.Load();
+		if (!interpreters.TryGetValue(ext, out var entry))
+			return;
+		string args = entry.Args.Replace("{file}", fileName);
+		if (arguments.Length > 0)
+			args += " " + arguments;
+		fileName = entry.Exec;
+		arguments = args;
 	}
 }

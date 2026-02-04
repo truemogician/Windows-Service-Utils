@@ -213,4 +213,63 @@ restartCmd.SetAction(result => {
 root.Subcommands.Add(restartCmd);
 #endregion
 
+#region Interpreter config
+var interpreterCmd = new Command("interpreter", "Manage script interpreter mappings");
+
+var intListCmd = new Command("list", "List all interpreter mappings");
+intListCmd.SetAction(_ => {
+	var all = InterpreterConfig.Load();
+	var custom = InterpreterConfig.LoadCustom();
+	foreach (var kvp in all.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase)) {
+		string marker = custom.ContainsKey(kvp.Key) ? " (custom)" : "";
+		Console.WriteLine($"  {kvp.Key,-8} {kvp.Value.Exec} {kvp.Value.Args}{marker}");
+	}
+	return 0;
+});
+interpreterCmd.Subcommands.Add(intListCmd);
+
+var intSetCmd = new Command("set", "Set an interpreter mapping for a file extension");
+var intExtArg = new Argument<string>("extension") { Description = "File extension (e.g. .py)" };
+var intExecOpt = new Option<string>("--exec", "-e") { Description = "Interpreter executable", Required = true };
+var intArgsOpt = new Option<string?>("--args", "-a") { Description = "Arguments template. Use {file} as placeholder for the script path. Default: \"{file}\"" };
+intSetCmd.Arguments.Add(intExtArg);
+intSetCmd.Options.Add(intExecOpt);
+intSetCmd.Options.Add(intArgsOpt);
+intSetCmd.SetAction(result => {
+	var ext = result.GetValue(intExtArg)!;
+	if (!ext.StartsWith("."))
+		ext = "." + ext;
+	var exec = result.GetValue(intExecOpt)!;
+	var intArgs = result.GetValue(intArgsOpt) ?? "\"{file}\"";
+
+	var custom = InterpreterConfig.LoadCustom();
+	custom[ext] = new(exec, intArgs);
+	InterpreterConfig.SaveCustom(custom);
+	Console.WriteLine($"Interpreter for '{ext}' set to: {exec} {intArgs}");
+	return 0;
+});
+interpreterCmd.Subcommands.Add(intSetCmd);
+
+var intRemoveCmd = new Command("remove", "Remove a custom interpreter mapping");
+var intRemoveExtArg = new Argument<string>("extension") { Description = "File extension to remove" };
+intRemoveCmd.Arguments.Add(intRemoveExtArg);
+intRemoveCmd.SetAction(result => {
+	var ext = result.GetValue(intRemoveExtArg)!;
+	if (!ext.StartsWith("."))
+		ext = "." + ext;
+	var custom = InterpreterConfig.LoadCustom();
+	if (!custom.Remove(ext)) {
+		Console.WriteLine($"No custom interpreter mapping found for '{ext}'.");
+		return 1;
+	}
+	InterpreterConfig.SaveCustom(custom);
+	var defaultEntry = InterpreterConfig.GetDefault(ext);
+	Console.WriteLine(defaultEntry is not null ? $"Custom mapping for '{ext}' removed. Default restored: {defaultEntry.Exec} {defaultEntry.Args}" : $"Custom mapping for '{ext}' removed.");
+	return 0;
+});
+interpreterCmd.Subcommands.Add(intRemoveCmd);
+
+root.Subcommands.Add(interpreterCmd);
+#endregion
+
 return await root.Parse(args).InvokeAsync();

@@ -13,11 +13,7 @@
 		<PreferNativeArm64>True</PreferNativeArm64>
 		<AssemblyTitle>$(MSBuildProjectName)</AssemblyTitle>
 		<AssemblyName>wsu</AssemblyName>
-		<AssemblyVersion>1.0.0.0</AssemblyVersion>
-	</PropertyGroup>
-
-	<PropertyGroup>
-		<ZipArchiveName>$(AssemblyName)-$(AssemblyVersion).zip</ZipArchiveName>
+		<AssemblyVersion>1.1.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -33,12 +29,14 @@
 	</ItemGroup>
 
 	<Target Name="CreateZipArchive" AfterTargets="Build" Condition="$(Configuration)==Release">
-		<Delete Files="$(TargetDir)$(ZipArchiveName)" />
-		<Exec Command="powershell -NoProfile -Command &quot;Compress-Archive -Path '$(TargetDir)*' -DestinationPath '$(TargetDir)$(ZipArchiveName)' -Force&quot;" />
+		<Exec Command="powershell -NoProfile -Command &quot;Compress-Archive -Path '$(TargetDir)*' -DestinationPath '$(TargetDir)$(AssemblyName)-$(AssemblyVersion).zip' -Force&quot;" />
 	</Target>
 
-	<Target Name="CleanZipArchive" AfterTargets="Clean" Condition="$(Configuration)==Release">
-		<Delete Files="$(TargetDir)$(ZipArchiveName)" />
+	<Target Name="CleanZipArchive" AfterTargets="Clean" BeforeTargets="Build" Condition="$(Configuration)==Release">
+		<ItemGroup>
+			<ZipArchives Include="$(TargetDir)$(AssemblyName)-*.zip" />
+		</ItemGroup>
+		<Delete Files="@(ZipArchives)" />
 	</Target>
 
 </Project>
